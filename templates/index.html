@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>区块链投票系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .candidate-card {
+            transition: all 0.3s;
+        }
+        .candidate-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .progress {
+            height: 30px;
+        }
+        .time-remaining {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <h1 class="text-center mb-4">区块链投票系统</h1>
+
+        <div class="alert alert-info mb-4">
+            <p>合约地址: <code>{{ contract_address }}</code></p>
+            <p>当前区块: {{ current_block }}</p>
+            <p class="time-remaining">
+                剩余时间:
+                <span id="time-remaining">{{ time_remaining // 60 }}分{{ time_remaining % 60 }}秒</span>
+                {% if voting_closed %}
+                <span class="badge bg-danger">投票已结束</span>
+                {% endif %}
+            </p>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <a href="{{ url_for('admin') }}" class="btn btn-warning">管理面板</a>
+            </div>
+        </div>
+
+        <h2 class="mb-3">候选人</h2>
+        <div class="row row-cols-1 row-cols-md-3 g-4 mb-5">
+            {% for candidate in candidates %}
+            <div class="col">
+                <div class="card candidate-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ candidate }}</h5>
+                        <p class="card-text">票数: {{ votes[candidate] }}</p>
+                        <div class="progress mb-3">
+                            <div class="progress-bar bg-success"
+                                 role="progressbar"
+                                 style="width: {{ (votes[candidate] / (votes.values()|max if votes.values()|max > 0 else 1)) * 100 }}%">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <h2 class="mb-3">投票</h2>
+        <div class="card mb-5">
+            <div class="card-body">
+                <form id="voteForm">
+                    <div class="mb-3">
+                        <label for="accountSelect" class="form-label">选择账户</label>
+                        <select class="form-select" id="accountSelect" required>
+                            {% for account in accounts %}
+                            <option value="{{ account.index }}"
+                                    data-tokens="{{ account.tokens }}"
+                                    {% if account.voted %}disabled{% endif %}>
+                                {{ account.address }} (余额: {{ account.balance|round(4) }} ETH, 代币: {{ account.tokens }})
+                                {% if account.voted %}(已投票){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="candidateSelect" class="form-label">选择候选人</label>
+                        <select class="form-select" id="candidateSelect" required>
+                            {% for candidate in candidates %}
+                            <option value="{{ candidate }}">{{ candidate }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="voteWeight" class="form-label">投票权重 (代币数量)</label>
+                        <input type="number" class="form-control" id="voteWeight"
+                               min="1" value="1" required>
+                        <div class="form-text">你拥有的代币: <span id="tokenBalance">{{ accounts[0].tokens }}</span></div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" {% if voting_closed %}disabled{% endif %}>
+                        {% if voting_closed %}投票已结束{% else %}提交投票{% endif %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 交易结果模态框 -->
+    <div class="modal fade" id="transactionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">交易结果</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="transactionResult"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                    <button type="button" class="btn btn-primary" onclick="window.location.reload()">刷新页面</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 投票结果模态框 -->
+    <div class="modal fade" id="resultModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">投票结果</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="resultContent"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 更新账户代币余额显示
+        document.getElementById('accountSelect').addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const tokens = selectedOption.getAttribute('data-tokens');
+            document.getElementById('tokenBalance').textContent = tokens;
+            document.getElementById('voteWeight').max = tokens;
+        });
+
+        // 处理投票表单提交
+        document.getElementById('voteForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 处理中...';
+
+            const accountIndex = document.getElementById('accountSelect').value;
+            const candidate = document.getElementById('candidateSelect').value;
+            const weight = parseInt(document.getElementById('voteWeight').value);
+            const maxTokens = parseInt(document.getElementById('accountSelect').options[document.getElementById('accountSelect').selectedIndex].getAttribute('data-tokens'));
+
+            if (weight > maxTokens) {
+                document.getElementById('transactionResult').innerHTML = `
+                    <div class="alert alert-danger">
+                        <h5>投票失败</h5>
+                        <p>投票权重超过可用代币数量 (当前: ${maxTokens})</p>
+                    </div>
+                `;
+                new bootstrap.Modal(document.getElementById('transactionModal')).show();
+                submitBtn.disabled = false;
+                submitBtn.textContent = '提交投票';
+                return;
+            }
+
+            try {
+                const response = await fetch('/vote', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        account_index: parseInt(accountIndex),
+                        candidate: candidate,
+                        weight: weight
+                    })
+                });
+
+                const result = await response.json();
+                const modal = new bootstrap.Modal(document.getElementById('transactionModal'));
+
+                if (result.success) {
+                    document.getElementById('transactionResult').innerHTML = `
+                        <div class="alert alert-success">
+                            <h5>投票成功！</h5>
+                            <p>候选人: <strong>${candidate}</strong></p>
+                            <p>使用代币: <strong>${weight}</strong></p>
+                            <p>新票数: <strong>${result.new_votes}</strong></p>
+                            <p>剩余代币: <strong>${result.new_balance}</strong></p>
+                            <hr>
+                            <p class="mb-1">交易哈希: <code>${result.tx_hash}</code></p>
+                            <p class="mb-1">区块号: ${result.block_number}</p>
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('transactionResult').innerHTML = `
+                        <div class="alert alert-danger">
+                            <h5>投票失败</h5>
+                            <p>${result.message}</p>
+                        </div>
+                    `;
+                }
+
+                modal.show();
+
+            } catch (error) {
+                document.getElementById('transactionResult').innerHTML = `
+                    <div class="alert alert-danger">
+                        <h5>网络错误</h5>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+                new bootstrap.Modal(document.getElementById('transactionModal')).show();
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '提交投票';
+            }
+        });
+
+        // 更新剩余时间并检查投票结束
+        let remainingSeconds = {{ time_remaining }};
+        const timeElement = document.getElementById('time-remaining');
+        const votingClosed = {{ voting_closed|tojson }};
+        const topCandidates = {{ top_candidates|tojson }};
+        const maxVotes = {{ max_votes|tojson }};
+        let hasShownResult = false; // 新增：记录结果模态框是否已显示
+
+        function showResultModal() {
+            if (hasShownResult) return; // 如果已显示，直接返回
+            hasShownResult = true; // 标记为已显示
+
+            const modal = new bootstrap.Modal(document.getElementById('resultModal'));
+            if (topCandidates.length > 0) {
+                document.getElementById('resultContent').innerHTML = `
+                    <div class="alert alert-info">
+                        <h5>投票结果</h5>
+                        <p>最高得票者: <strong>${topCandidates.join(', ')}</strong></p>
+                        <p>票数: <strong>${maxVotes}</strong></p>
+                    </div>
+                `;
+            } else {
+                document.getElementById('resultContent').innerHTML = `
+                    <div class="alert alert-info">
+                        <h5>投票结果</h5>
+                        <p>尚无投票</p>
+                    </div>
+                `;
+            }
+            modal.show();
+        }
+
+        function updateTime() {
+            if (remainingSeconds <= 0 || votingClosed) {
+                timeElement.textContent = "投票时间已结束";
+                showResultModal(); // 仅在未显示时调用
+                return;
+            }
+
+            remainingSeconds--;
+            const minutes = Math.floor(remainingSeconds / 60);
+            const seconds = remainingSeconds % 60;
+            timeElement.textContent = `${minutes}分${seconds}秒`;
+        }
+
+        // 初始检查投票是否已结束
+        if (remainingSeconds <= 0 || votingClosed) {
+            showResultModal();
+        }
+
+        setInterval(updateTime, 1000);
+
+        // 在模态框关闭时保持 hasShownResult 为 true
+        document.getElementById('resultModal').addEventListener('hidden.bs.modal', function () {
+            hasShownResult = true;
+        });
+    </script>
+</body>
+</html>
