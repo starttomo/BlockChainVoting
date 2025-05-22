@@ -3,95 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理面板</title>
+    <title>管理界面</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- 可以添加其他样式 -->
 </head>
 <body>
-    <div class="container py-5">
-        <h1 class="text-center mb-4">投票系统管理面板</h1>
-
+    <div class="container">
+        <h1>管理界面</h1>
+        <!-- 显示错误或成功消息 -->
         {% if error %}
-        <div class="alert alert-danger mb-4">
-            {{ error }}
-        </div>
+        <div class="alert alert-danger">{{ error }}</div>
         {% endif %}
         {% if success %}
-        <div class="alert alert-success mb-4">
-            {{ success }}
-        </div>
+        <div class="alert alert-success">{{ success }}</div>
         {% endif %}
 
-        <div class="row mb-4">
-            <div class="col-md-6">
-                <a href="{{ url_for('index') }}" class="btn btn-secondary">返回投票页面</a>
+        <!-- 管理操作表单 -->
+        <form method="post">
+            <div class="mb-3">
+                <label for="action" class="form-label">操作</label>
+                <select class="form-select" id="action" name="action">
+                    <option value="distribute">分配代币</option>
+                    <option value="close">结束投票</option>
+                    <option value="reset">重置投票</option>
+                </select>
             </div>
-        </div>
-
-        <div class="card mb-4">
-            <div class="card-body">
-                <h2 class="card-title">系统状态</h2>
-                <p>投票状态: {% if voting_closed %}已结束{% else %}进行中{% endif %}</p>
-                <p>剩余时间: {{ time_remaining // 60 }}分{{ time_remaining % 60 }}秒</p>
-
-                <div class="d-flex gap-2">
-                    <form method="POST" class="d-inline">
-                        <input type="hidden" name="action" value="close">
-                        <button type="submit" class="btn btn-danger" {% if voting_closed %}disabled{% endif %}>
-                            结束投票
-                        </button>
-                    </form>
-
-                    <form method="POST" class="d-inline">
-                        <input type="hidden" name="action" value="reset">
-                        <div class="input-group mb-2" style="width: 200px;">
-                            <input type="number" class="form-control" name="reset_duration" value="10" min="1" required>
-                            <span class="input-group-text">分钟</span>
-                        </div>
-                        <button type="submit" class="btn btn-warning">
-                            重置投票
-                        </button>
-                    </form>
+            <!-- 根据操作显示不同的输入框 -->
+            <div id="distribute-options" style="display: none;">
+                <div class="mb-3">
+                    <label for="recipient" class="form-label">接收者账户索引</label>
+                    <input type="number" class="form-control" id="recipient" name="recipient">
+                </div>
+                <div class="mb-3">
+                    <label for="amount" class="form-label">代币数量</label>
+                    <input type="number" class="form-control" id="amount" name="amount">
                 </div>
             </div>
-        </div>
-
-        <div class="card">
-            <div class="card-body">
-                <h2 class="card-title">分配代币</h2>
-
-                <form method="POST">
-                    <input type="hidden" name="action" value="distribute">
-
-                    <div class="mb-3">
-                        <label for="recipient" class="form-label">选择账户</label>
-                        <select class="form-select" id="recipient" name="recipient" required>
-                            {% for account in accounts %}
-                            <option value="{{ account.index }}">{{ account.address }} (当前代币: {{ account.tokens }})</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="amount" class="form-label">代币数量</label>
-                        <input type="number" class="form-control" id="amount" name="amount" min="1" required>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary">分配代币</button>
-                </form>
+            <div id="reset-options" style="display: none;">
+                <div class="mb-3">
+                    <label for="reset_duration" class="form-label">重置投票时长 (分钟)</label>
+                    <input type="number" class="form-control" id="reset_duration" name="reset_duration" value="10">
+                </div>
             </div>
-        </div>
+            <button type="submit" class="btn btn-primary">执行操作</button>
+        </form>
+
+        <!-- 显示账户信息 -->
+        <h2>账户信息</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>索引</th>
+                    <th>地址</th>
+                    <th>代币余额</th>
+                    <th>是否已投票</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for account in accounts %}
+                <tr>
+                    <td>{{ account.index }}</td>
+                    <td>{{ account.address }}</td>
+                    <td>{{ account.tokens }}</td>
+                    <td>{{ account.voted }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- 显示投票状态 -->
+        <h2>投票状态</h2>
+        <p>投票是否结束: {{ voting_closed }}</p>
+        <p>剩余时间: {{ time_remaining }} 秒</p>
+
+        <!-- 返回投票界面的按钮 -->
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">返回投票界面</a>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // 在结束投票或重置投票后刷新页面
-        document.querySelectorAll('form').forEach(form => {
-            form.addEventListener('submit', () => {
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000); // 延迟1秒以确保交易完成
-            });
+        const actionSelect = document.getElementById('action');
+        const distributeOptions = document.getElementById('distribute-options');
+        const resetOptions = document.getElementById('reset-options');
+
+        actionSelect.addEventListener('change', function() {
+            if (this.value === 'distribute') {
+                distributeOptions.style.display = 'block';
+                resetOptions.style.display = 'none';
+            } else if (this.value === 'reset') {
+                distributeOptions.style.display = 'none';
+                resetOptions.style.display = 'block';
+            } else {
+                distributeOptions.style.display = 'none';
+                resetOptions.style.display = 'none';
+            }
         });
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

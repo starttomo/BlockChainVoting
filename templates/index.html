@@ -5,103 +5,506 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>区块链投票系统</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .candidate-card {
-            transition: all 0.3s;
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --accent-color: #4cc9f0;
+            --dark-color: #2b2d42;
+            --light-color: #f8f9fa;
+            --success-color: #4caf50;
+            --warning-color: #ff9800;
+            --danger-color: #f44336;
         }
-        .candidate-card:hover {
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            color: var(--dark-color);
+        }
+
+        .dashboard {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            box-shadow: 2px 0 15px rgba(0, 0, 0, 0.1);
+            padding: 2rem 1rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar-header h3 {
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+        .nav-item {
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-item:hover {
+            background-color: rgba(67, 97, 238, 0.1);
+        }
+
+        .nav-link {
+            color: var(--dark-color);
+            font-weight: 500;
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-link i {
+            margin-right: 10px;
+            width: 24px;
+            text-align: center;
+        }
+
+        .nav-link.active {
+            color: var(--primary-color);
+            background-color: rgba(67, 97, 238, 0.1);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: var(--primary-color);
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin-bottom: 1.5rem;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+        }
+
+        .card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
         }
+
+        .card-header {
+            background-color: transparent;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            padding: 1.25rem 1.5rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.35rem 0.75rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        .status-badge.active {
+            background-color: rgba(76, 201, 240, 0.2);
+            color: var(--accent-color);
+        }
+
+        .status-badge.closed {
+            background-color: rgba(244, 67, 54, 0.2);
+            color: var(--danger-color);
+        }
+
+        .candidate-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .candidate-card {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+
+        .candidate-card:hover {
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .candidate-info {
+            padding: 1.5rem;
+            flex: 1;
+        }
+
+        .candidate-name {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--dark-color);
+        }
+
+        .candidate-votes {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-bottom: 1rem;
+        }
+
         .progress {
-            height: 30px;
+            height: 10px;
+            border-radius: 5px;
+            background-color: #e9ecef;
+            margin-bottom: 1rem;
         }
-        .time-remaining {
+
+        .progress-bar {
+            background-color: var(--primary-color);
+            border-radius: 5px;
+        }
+
+        .vote-form {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .form-label {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--dark-color);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            padding: 0.5rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:disabled {
+            background-color: #b7c2ff;
+            border-color: #b7c2ff;
+        }
+
+        .info-box {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .info-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            background-color: rgba(67, 97, 238, 0.1);
+            color: var(--primary-color);
+        }
+
+        .info-content {
+            flex: 1;
+        }
+
+        .info-title {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-bottom: 0.25rem;
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+
+        .countdown {
             font-size: 1.2rem;
-            font-weight: bold;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .modal-content {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .modal-header {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            padding: 1.5rem;
+        }
+
+        .modal-title {
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-footer {
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+            padding: 1rem 1.5rem;
+        }
+
+        @media (max-width: 992px) {
+            .dashboard {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                padding: 1rem;
+            }
+
+            .main-content {
+                padding: 1.5rem;
+            }
+
+            .candidate-grid {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container py-5">
-        <h1 class="text-center mb-4">区块链投票系统</h1>
-
-        <div class="alert alert-info mb-4">
-            <p>合约地址: <code>{{ contract_address }}</code></p>
-            <p>当前区块: {{ current_block }}</p>
-            <p class="time-remaining">
-                剩余时间:
-                <span id="time-remaining">{{ time_remaining // 60 }}分{{ time_remaining % 60 }}秒</span>
-                {% if voting_closed %}
-                <span class="badge bg-danger">投票已结束</span>
-                {% endif %}
-            </p>
-        </div>
-
-        <div class="row mb-4">
-            <div class="col-md-6">
-                <a href="{{ url_for('admin') }}" class="btn btn-warning">管理面板</a>
+    <div class="dashboard">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3><i class="fas fa-vote-yea"></i> 区块链投票</h3>
             </div>
-        </div>
-
-        <h2 class="mb-3">候选人</h2>
-        <div class="row row-cols-1 row-cols-md-3 g-4 mb-5">
-            {% for candidate in candidates %}
-            <div class="col">
-                <div class="card candidate-card h-100">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ candidate }}</h5>
-                        <p class="card-text">票数: {{ votes[candidate] }}</p>
-                        <div class="progress mb-3">
-                            <div class="progress-bar bg-success"
-                                 role="progressbar"
-                                 style="width: {{ (votes[candidate] / (votes.values()|max if votes.values()|max > 0 else 1)) * 100 }}%">
-                            </div>
-                        </div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#">
+                        <i class="fas fa-home"></i> 投票首页
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin') }}">
+                        <i class="fas fa-cog"></i> 管理面板
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="fas fa-info-circle"></i> 系统信息
+                    </a>
+                </li>
+            </ul>
+            <div class="mt-auto">
+                <div class="info-box">
+                    <div class="info-icon">
+                        <i class="fas fa-link"></i>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-title">合约地址</div>
+                        <div class="info-value text-truncate">{{ contract_address }}</div>
+                    </div>
+                </div>
+                <div class="info-box">
+                    <div class="info-icon">
+                        <i class="fas fa-cube"></i>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-title">当前区块</div>
+                        <div class="info-value">{{ current_block }}</div>
                     </div>
                 </div>
             </div>
-            {% endfor %}
         </div>
 
-        <h2 class="mb-3">投票</h2>
-        <div class="card mb-5">
-            <div class="card-body">
-                <form id="voteForm">
-                    <div class="mb-3">
-                        <label for="accountSelect" class="form-label">选择账户</label>
-                        <select class="form-select" id="accountSelect" required>
-                            {% for account in accounts %}
-                            <option value="{{ account.index }}"
-                                    data-tokens="{{ account.tokens }}"
-                                    {% if account.voted %}disabled{% endif %}>
-                                {{ account.address }} (余额: {{ account.balance|round(4) }} ETH, 代币: {{ account.tokens }})
-                                {% if account.voted %}(已投票){% endif %}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <div class="header">
+                <h1>区块链投票系统</h1>
+                <div>
+                    <span class="countdown me-3">
+                        <i class="fas fa-clock"></i>
+                        <span id="time-remaining">{{ time_remaining // 60 }}分{{ time_remaining % 60 }}秒</span>
+                    </span>
+                    <span class="status-badge {% if voting_closed %}closed{% else %}active{% endif %}">
+                        {% if voting_closed %}投票已结束{% else %}投票进行中{% endif %}
+                    </span>
+                </div>
+            </div>
 
-                    <div class="mb-3">
-                        <label for="candidateSelect" class="form-label">选择候选人</label>
-                        <select class="form-select" id="candidateSelect" required>
-                            {% for candidate in candidates %}
-                            <option value="{{ candidate }}">{{ candidate }}</option>
-                            {% endfor %}
-                        </select>
+            <!-- 候选人卡片 -->
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-users me-2"></i>候选人
+                </div>
+                <div class="card-body">
+                    <div class="candidate-grid">
+                        {% for candidate in candidates %}
+                        <div class="candidate-card">
+                            <div class="candidate-info">
+                                <h5 class="candidate-name">{{ candidate }}</h5>
+                                <div class="candidate-votes">票数: {{ votes[candidate] }}</div>
+                                <div class="progress">
+                                    <div class="progress-bar"
+                                         role="progressbar"
+                                         style="width: {{ (votes[candidate] / (votes.values()|max if votes.values()|max > 0 else 1)) * 100 }}%">
+                                    </div>
+                                </div>
+                                <div class="text-muted small">
+                                    占比: {{ "%.1f"|format((votes[candidate] / (votes.values()|sum if votes.values()|sum > 0 else 1)) * 100) }}%
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
+                </div>
+            </div>
 
-                    <div class="mb-3">
-                        <label for="voteWeight" class="form-label">投票权重 (代币数量)</label>
-                        <input type="number" class="form-control" id="voteWeight"
-                               min="1" value="1" required>
-                        <div class="form-text">你拥有的代币: <span id="tokenBalance">{{ accounts[0].tokens }}</span></div>
+            <!-- 投票表单 -->
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fas fa-pencil-alt me-2"></i>投票
+                        </div>
+                        <div class="card-body">
+                            <form id="voteForm">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="accountSelect" class="form-label">选择账户</label>
+                                        <select class="form-select" id="accountSelect" required>
+                                            {% for account in accounts %}
+                                            <option value="{{ account.index }}"
+                                                    data-tokens="{{ account.tokens }}"
+                                                    {% if account.voted %}disabled{% endif %}>
+                                                {{ account.address|truncate(10, True, '...', 6) }}
+                                                (余额: {{ account.balance|round(4) }} ETH, 代币: {{ account.tokens }})
+                                                {% if account.voted %}(已投票){% endif %}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="candidateSelect" class="form-label">选择候选人</label>
+                                        <select class="form-select" id="candidateSelect" required>
+                                            {% for candidate in candidates %}
+                                            <option value="{{ candidate }}">{{ candidate }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="voteWeight" class="form-label">投票权重 (代币数量)</label>
+                                    <input type="number" class="form-control" id="voteWeight"
+                                           min="1" value="1" required>
+                                    <div class="form-text">可用代币: <span id="tokenBalance">{{ accounts[0].tokens }}</span></div>
+                                </div>
+                                <button type="submit" class="btn btn-primary" {% if voting_closed %}disabled{% endif %}>
+                                    {% if voting_closed %}
+                                    <i class="fas fa-ban me-1"></i> 投票已结束
+                                    {% else %}
+                                    <i class="fas fa-paper-plane me-1"></i> 提交投票
+                                    {% endif %}
+                                </button>
+                            </form>
+                        </div>
                     </div>
-
-                    <button type="submit" class="btn btn-primary" {% if voting_closed %}disabled{% endif %}>
-                        {% if voting_closed %}投票已结束{% else %}提交投票{% endif %}
-                    </button>
-                </form>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fas fa-chart-pie me-2"></i>投票统计
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>总票数</span>
+                                    <span>{{ votes.values()|sum }}</span>
+                                </div>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-success"
+                                         role="progressbar"
+                                         style="width: 100%">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>已投票账户</span>
+                                    <span>{{ accounts|selectattr('voted')|list|length }}/{{ accounts|length }}</span>
+                                </div>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-info"
+                                         role="progressbar"
+                                         style="width: {{ (accounts|selectattr('voted')|list|length / accounts|length) * 100 }}%">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>剩余时间</span>
+                                    <span id="time-remaining-short">{{ time_remaining // 60 }}分{{ time_remaining % 60 }}秒</span>
+                                </div>
+                            </div>
+                            {% if top_candidates %}
+                            <div class="alert alert-success mt-3">
+                                <h6><i class="fas fa-trophy me-1"></i> 当前领先</h6>
+                                <p class="mb-1">{{ top_candidates|join(', ') }}</p>
+                                <p class="mb-0">票数: {{ max_votes }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -111,7 +514,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">交易结果</h5>
+                    <h5 class="modal-title"><i class="fas fa-receipt me-2"></i>交易结果</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -119,7 +522,9 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
-                    <button type="button" class="btn btn-primary" onclick="window.location.reload()">刷新页面</button>
+                    <button type="button" class="btn btn-primary" onclick="window.location.reload()">
+                        <i class="fas fa-sync-alt me-1"></i> 刷新页面
+                    </button>
                 </div>
             </div>
         </div>
@@ -130,7 +535,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">投票结果</h5>
+                    <h5 class="modal-title"><i class="fas fa-award me-2"></i>投票结果</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -156,10 +561,9 @@
         // 处理投票表单提交
         document.getElementById('voteForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-
             const submitBtn = e.target.querySelector('button[type="submit"]');
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 处理中...';
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> 处理中...';
 
             const accountIndex = document.getElementById('accountSelect').value;
             const candidate = document.getElementById('candidateSelect').value;
@@ -169,13 +573,13 @@
             if (weight > maxTokens) {
                 document.getElementById('transactionResult').innerHTML = `
                     <div class="alert alert-danger">
-                        <h5>投票失败</h5>
+                        <h5><i class="fas fa-exclamation-triangle me-1"></i> 投票失败</h5>
                         <p>投票权重超过可用代币数量 (当前: ${maxTokens})</p>
                     </div>
                 `;
                 new bootstrap.Modal(document.getElementById('transactionModal')).show();
                 submitBtn.disabled = false;
-                submitBtn.textContent = '提交投票';
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> 提交投票';
                 return;
             }
 
@@ -198,58 +602,58 @@
                 if (result.success) {
                     document.getElementById('transactionResult').innerHTML = `
                         <div class="alert alert-success">
-                            <h5>投票成功！</h5>
-                            <p>候选人: <strong>${candidate}</strong></p>
-                            <p>使用代币: <strong>${weight}</strong></p>
-                            <p>新票数: <strong>${result.new_votes}</strong></p>
-                            <p>剩余代币: <strong>${result.new_balance}</strong></p>
+                            <h5><i class="fas fa-check-circle me-1"></i> 投票成功！</h5>
+                            <p><i class="fas fa-user me-1"></i> 候选人: <strong>${candidate}</strong></p>
+                            <p><i class="fas fa-coins me-1"></i> 使用代币: <strong>${weight}</strong></p>
+                            <p><i class="fas fa-poll me-1"></i> 新票数: <strong>${result.new_votes}</strong></p>
+                            <p><i class="fas fa-wallet me-1"></i> 剩余代币: <strong>${result.new_balance}</strong></p>
                             <hr>
-                            <p class="mb-1">交易哈希: <code>${result.tx_hash}</code></p>
-                            <p class="mb-1">区块号: ${result.block_number}</p>
+                            <p class="mb-1"><i class="fas fa-hashtag me-1"></i> 交易哈希: <code>${result.tx_hash}</code></p>
+                            <p class="mb-1"><i class="fas fa-cube me-1"></i> 区块号: ${result.block_number}</p>
                         </div>
                     `;
                 } else {
                     document.getElementById('transactionResult').innerHTML = `
                         <div class="alert alert-danger">
-                            <h5>投票失败</h5>
+                            <h5><i class="fas fa-exclamation-triangle me-1"></i> 投票失败</h5>
                             <p>${result.message}</p>
                         </div>
                     `;
                 }
 
                 modal.show();
-
             } catch (error) {
                 document.getElementById('transactionResult').innerHTML = `
                     <div class="alert alert-danger">
-                        <h5>网络错误</h5>
+                        <h5><i class="fas fa-exclamation-triangle me-1"></i> 网络错误</h5>
                         <p>${error.message}</p>
                     </div>
                 `;
                 new bootstrap.Modal(document.getElementById('transactionModal')).show();
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.textContent = '提交投票';
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> 提交投票';
             }
         });
 
         // 更新剩余时间并检查投票结束
         let remainingSeconds = {{ time_remaining }};
         const timeElement = document.getElementById('time-remaining');
+        const timeElementShort = document.getElementById('time-remaining-short');
         const votingClosed = {{ voting_closed|tojson }};
         const topCandidates = {{ top_candidates|tojson }};
         const maxVotes = {{ max_votes|tojson }};
-        let hasShownResult = false; // 新增：记录结果模态框是否已显示
+        let hasShownResult = false;
 
         function showResultModal() {
-            if (hasShownResult) return; // 如果已显示，直接返回
-            hasShownResult = true; // 标记为已显示
+            if (hasShownResult) return;
+            hasShownResult = true;
 
             const modal = new bootstrap.Modal(document.getElementById('resultModal'));
             if (topCandidates.length > 0) {
                 document.getElementById('resultContent').innerHTML = `
-                    <div class="alert alert-info">
-                        <h5>投票结果</h5>
+                    <div class="alert alert-success">
+                        <h5><i class="fas fa-trophy me-1"></i> 投票结果</h5>
                         <p>最高得票者: <strong>${topCandidates.join(', ')}</strong></p>
                         <p>票数: <strong>${maxVotes}</strong></p>
                     </div>
@@ -257,25 +661,30 @@
             } else {
                 document.getElementById('resultContent').innerHTML = `
                     <div class="alert alert-info">
-                        <h5>投票结果</h5>
+                        <h5><i class="fas fa-info-circle me-1"></i> 投票结果</h5>
                         <p>尚无投票</p>
                     </div>
                 `;
             }
+
             modal.show();
         }
 
         function updateTime() {
             if (remainingSeconds <= 0 || votingClosed) {
                 timeElement.textContent = "投票时间已结束";
-                showResultModal(); // 仅在未显示时调用
+                timeElementShort.textContent = "已结束";
+                showResultModal();
                 return;
             }
 
             remainingSeconds--;
             const minutes = Math.floor(remainingSeconds / 60);
             const seconds = remainingSeconds % 60;
-            timeElement.textContent = `${minutes}分${seconds}秒`;
+            const timeStr = `${minutes}分${seconds}秒`;
+
+            timeElement.textContent = timeStr;
+            timeElementShort.textContent = timeStr;
         }
 
         // 初始检查投票是否已结束
